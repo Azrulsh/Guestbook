@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/validation.php';
 
 header('Content-Type: text/plain; charset=UTF-8');
 header('Cache-Control: no-store');
@@ -21,13 +22,11 @@ try {
         exit('Permintaan tidak sah atau sesi telah tamat. Buka semula halaman paparan dan cuba lagi.');
     }
 
-    $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 1],
-    ]);
-
-    if ($id === false || $id === null) {
+    try {
+        $id = validateRecordId($_POST['id'] ?? null);
+    } catch (InputValidationException $exception) {
         http_response_code(400);
-        exit('ID rekod tidak sah.');
+        exit($exception->getMessage());
     }
 
     // Validate the request before opening the database connection.

@@ -1,17 +1,21 @@
 <?php
 
 require_once __DIR__ . '/html.php';
+require_once __DIR__ . '/csrf.php';
+require_once __DIR__ . '/validation.php';
 
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
-    'options' => ['min_range' => 1],
-]);
-
-if ($id === false || $id === null) {
+try {
+    $id = validateRecordId($_GET['id'] ?? null);
+} catch (InputValidationException $exception) {
     http_response_code(400);
-    exit('ID rekod tidak sah.');
+    exit($exception->getMessage());
 }
 
 try {
+    startCsrfSession();
+    $csrfToken = csrfToken();
+    session_write_close();
+
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
 
@@ -36,7 +40,7 @@ try {
     $entry = mysqli_fetch_assoc($result);
     mysqli_free_result($result);
     mysqli_stmt_close($stmt);
-} catch (mysqli_sql_exception | RuntimeException $exception) {
+} catch (Exception $exception) {
     error_log('ubah.php: ' . $exception->getMessage());
     http_response_code(500);
     exit('Data buku pelawat tidak dapat dimuatkan. Sila cuba lagi kemudian.');
@@ -55,14 +59,15 @@ if ($entry === null) {
 </head>
 <body>
     <form method="post" action="kemaskini.php">
+        <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
         <label for="nama">Nama:</label>
-        <input type="text" id="nama" name="nama" size="40" value="<?= escapeHtml($entry['nama']) ?>">
+        <input type="text" id="nama" name="nama" size="40" required maxlength="<?= BOOK_NAME_MAX_LENGTH ?>" value="<?= escapeHtml($entry['nama']) ?>">
         <br>
         <label for="email">Email:</label>
-        <input type="text" id="email" name="email" size="25" value="<?= escapeHtml($entry['email']) ?>">
+        <input type="email" id="email" name="email" size="25" required maxlength="<?= BOOK_EMAIL_MAX_LENGTH ?>" value="<?= escapeHtml($entry['email']) ?>">
         <br>
         <label for="komen">Catatan:</label><br>
-        <textarea id="komen" name="komen" cols="30" rows="8"><?= escapeHtml($entry['komen']) ?></textarea>
+        <textarea id="komen" name="komen" cols="30" rows="8" required><?= escapeHtml($entry['komen']) ?></textarea>
         <br>
         <input type="hidden" name="id" value="<?= escapeHtml((string) $entry['id']) ?>">
         <input type="submit" value="Ubah">
