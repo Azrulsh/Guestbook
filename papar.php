@@ -1,46 +1,52 @@
-<!-- paper.phph -->
-<!-- To display all information of database. -->
-<html>
-<head>
-<title>Paparan Buku Pelawat Saya</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-</head>
-
-<body bgcolor="#FFFFFF" text="#000000">
-<ol>
 <?php
-include("dbase.php");
 
-$query = "SELECT * FROM book";
-$result = mysqli_query($conn,$query);
+require_once __DIR__ . '/html.php';
 
-if (mysqli_num_rows($result) > 0){
-    // output data of each row
-    while($row = mysqli_fetch_assoc($result)){
-    $id = $row["id"];
-	$nama = $row["nama"];
-	$email = $row["email"];
-	$tarikh = $row["tarikh"];
-	$masa = $row["masa"];
-	$komen = $row["komen"];
-	?>
-	<li>
-	Nama : <?php echo $nama; ?><br>
-	Email : <?php echo $email; ?><br>
-	Tarikh / Masa : <?php echo "$tarikh / $masa"; ?><br>
-	Catatan : <?php echo nl2br($komen); ?><br>
-	Tindakan : <a href="ubah.php?id=<?php echo $id; ?>">Ubah</a> /  <a href="buang.php?id=<?php echo $id; ?>">Padam</a><br>
-    </li>
-	<?php
+try {
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+    require_once __DIR__ . '/dbase.php';
+
+    $result = mysqli_query($conn, 'SELECT id, nama, email, tarikh, masa, komen FROM book');
+
+    if ($result === false) {
+        throw new RuntimeException(mysqli_error($conn));
     }
-} else {
-    echo "0 results";
 
+    $entries = mysqli_fetch_all($result, MYSQLI_ASSOC);
+    mysqli_free_result($result);
+} catch (mysqli_sql_exception | RuntimeException $exception) {
+    error_log('papar.php: ' . $exception->getMessage());
+    http_response_code(500);
+    exit('Data buku pelawat tidak dapat dimuatkan. Sila cuba lagi kemudian.');
 }
 ?>
-</ol>
-<div align="center">[ <a href="index.php">Balik ke Halaman Utama</a> |
-<a href="masuk.php">Tambah Buku Pelawat</a> ] </div>
-
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="utf-8">
+    <title>Paparan Buku Pelawat Saya</title>
+</head>
+<body>
+    <?php if ($entries === []): ?>
+        <p>Tiada rekod buku pelawat.</p>
+    <?php else: ?>
+        <ol>
+            <?php foreach ($entries as $entry): ?>
+                <li>
+                    Nama: <?= escapeHtml($entry['nama']) ?><br>
+                    Email: <?= escapeHtml($entry['email']) ?><br>
+                    Tarikh / Masa: <?= escapeHtml($entry['tarikh']) ?> / <?= escapeHtml($entry['masa']) ?><br>
+                    Catatan: <?= nl2br(escapeHtml($entry['komen'])) ?><br>
+                    Tindakan:
+                    <a href="ubah.php?id=<?= escapeHtml(rawurlencode((string) $entry['id'])) ?>">Ubah</a> /
+                    <a href="buang.php?id=<?= escapeHtml(rawurlencode((string) $entry['id'])) ?>">Padam</a><br>
+                </li>
+            <?php endforeach; ?>
+        </ol>
+    <?php endif; ?>
+    <div style="text-align: center;">
+        [ <a href="index.php">Balik ke Halaman Utama</a> |
+        <a href="masuk.php">Tambah Buku Pelawat</a> ]
+    </div>
 </body>
 </html>

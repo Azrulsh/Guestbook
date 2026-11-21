@@ -1,6 +1,5 @@
-<!-- dbase.php -->
-<!-- To connect between php scripting and database. -->
 <?php
+// Shared database connection. Keep this file free of HTML output.
 
 define("DATABASE_HOST", "localhost");
 define("DATABASE_USER", "root");
@@ -21,4 +20,3 @@ mysqli_select_db($conn,"guestbook") or die( "Could not open products database");
 
 //set the default time zone to use in Malaysia
 date_default_timezone_set('Asia/Kuala_Lumpur');
-?>
