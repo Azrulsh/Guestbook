@@ -24,11 +24,7 @@ try {
 
     $entry = validateGuestbookEntry($_POST);
 
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
-    mysqli_set_charset($conn, 'utf8mb4');
-    // Prevent silent truncation or character replacement in non-strict databases.
-    mysqli_query($conn, "SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'STRICT_ALL_TABLES')");
 
     $tarikh = date('d-m-Y');
     $masa = date('H:i:s');

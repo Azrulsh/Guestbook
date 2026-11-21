@@ -16,7 +16,6 @@ try {
     $csrfToken = csrfToken();
     session_write_close();
 
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
 
     $stmt = mysqli_prepare($conn, 'SELECT id, nama, email, komen FROM book WHERE id = ?');

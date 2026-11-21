@@ -30,7 +30,6 @@ try {
     }
 
     // Validate the request before opening the database connection.
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
 
     $stmt = mysqli_prepare($conn, 'DELETE FROM book WHERE id = ?');

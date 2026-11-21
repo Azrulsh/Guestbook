@@ -48,6 +48,7 @@ if (!mkdir($testDirectory, 0700)) {
 // The token endpoint exists only in this temporary test router.
 $router = $testDirectory . '/router.php';
 $csrfPath = var_export($projectRoot . '/csrf.php', true);
+$rootPath = var_export($projectRoot . '/', true);
 $fixturePath = var_export($testDirectory . '/', true);
 foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'csrf.php', 'validation.php', 'html.php'] as $fixtureFile) {
     copy($projectRoot . '/' . $fixtureFile, $testDirectory . '/' . $fixtureFile);
@@ -58,8 +59,8 @@ foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'csrf.php', 'v
 file_put_contents($testDirectory . '/dbase.php', <<<'PHP'
 <?php
 date_default_timezone_set('Asia/Kuala_Lumpur');
-$conn = mysqli_connect('localhost', 'root', '', 'guestbook');
-mysqli_set_charset($conn, 'utf8mb4');
+require_once __DIR__ . '/database.php';
+$conn = createDatabaseConnection();
 mysqli_query($conn, 'CREATE TEMPORARY TABLE book (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     nama VARCHAR(50) NOT NULL,
@@ -80,6 +81,7 @@ register_shutdown_function(static function () use ($conn): void {
 });
 PHP
 );
+copy($projectRoot . '/database.php', $testDirectory . '/database.php');
 file_put_contents($router, '<?php
 if ($_SERVER["REQUEST_URI"] === "/__test_token") {
     require ' . $csrfPath . ';
@@ -89,6 +91,21 @@ if ($_SERVER["REQUEST_URI"] === "/__test_token") {
     return;
 }
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
+$parts = explode("/", trim($path, "/"));
+if (count($parts) === 3 && $parts[0] === "__db_error"
+    && in_array($parts[2], ["papar.php", "ubah.php", "isikan.php", "kemaskini.php", "buang.php"], true)) {
+    putenv("GUESTBOOK_DB_HOST=127.0.0.1");
+    putenv("GUESTBOOK_DB_NAME=__guestbook_missing_" . ' . var_export(bin2hex(random_bytes(8)), true) . ');
+    if ($parts[1] === "port") {
+        putenv("GUESTBOOK_DB_PORT=1");
+    } elseif ($parts[1] === "config") {
+        putenv("GUESTBOOK_DB_PORT=invalid");
+    } elseif ($parts[1] === "password") {
+        putenv("GUESTBOOK_DB_PASSWORD=__invalid_test_password__");
+    }
+    require ' . $rootPath . ' . $parts[2];
+    return;
+}
 $allowed = ["isikan.php", "kemaskini.php", "buang.php", "ubah.php"];
 if (str_starts_with($path, "/__fixture/") && in_array(basename($path), $allowed, true)) {
     require ' . $fixturePath . ' . basename($path);
@@ -247,6 +264,26 @@ try {
         }
         echo "PASS: 8 temporary-table write integration cases. No persistent database mutations.\n";
     }
+
+    foreach (['port', 'config', 'password', 'missing'] as $failure) {
+        foreach (['papar.php', 'ubah.php', 'isikan.php', 'kemaskini.php', 'buang.php'] as $handler) {
+            $url = $baseUrl . '/__db_error/' . $failure . '/' . $handler;
+            $response = in_array($handler, ['papar.php', 'ubah.php'], true)
+                ? requestHttpTest($url . '?id=1', 'GET', [], $cookie)
+                : requestHttpTest($url, 'POST', $validEntry, $cookie);
+            expectHttpStatus(500, $response);
+            foreach (['Warning', 'Stack trace', 'mysqli', '127.0.0.1', '__guestbook_missing_', '__invalid_test_password__', $projectRoot] as $privateDetail) {
+                if (stripos($response['body'], $privateDetail) !== false) {
+                    throw new RuntimeException('Database failure disclosed internal details.');
+                }
+            }
+        }
+    }
+    expectHttpStatus(404, requestHttpTest($baseUrl . '/dbase.php'));
+    if (strpos(file_get_contents($testDirectory . '/server.log'), '__invalid_test_password__') !== false) {
+        throw new RuntimeException('Database credentials must not appear in logs.');
+    }
+    echo "PASS: 20 database failure HTTP cases and direct bootstrap access rejection.\n";
 } finally {
     if (is_resource($process)) {
         proc_terminate($process);

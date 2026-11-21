@@ -8,7 +8,6 @@ try {
     $csrfToken = csrfToken();
     session_write_close();
 
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
 
     $result = mysqli_query($conn, 'SELECT id, nama, email, tarikh, masa, komen FROM book');
