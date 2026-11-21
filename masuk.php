@@ -14,30 +14,32 @@ try {
     exit('Borang tidak dapat dimuatkan. Sila cuba lagi kemudian.');
 }
 ?>
-<html>
+<!DOCTYPE html>
+<html lang="ms">
 <head>
-<title>Buku Palawat Saya</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta charset="utf-8">
+    <title>Buku Pelawat Saya</title>
 </head>
-
-<body bgcolor="#FFFFFF" text="#000000">
- <form method="post" action="isikan.php">
-<input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
-Nama :
-<input type="text" name="nama" size="40" required maxlength="<?= BOOK_NAME_MAX_LENGTH ?>">
-<br>
-Email:
-<input type="email" name="email" size="25" required maxlength="<?= BOOK_EMAIL_MAX_LENGTH ?>">
-<br>
-Catatan : <br>
-<textarea name="komen" cols="30" rows="8" required></textarea>
-<br>
-<input type="submit" value="Hantar">
-<input type="reset" value="Semula">
-<br>
-</form>
-<hr>
-<div align="center">[ <a href="papar.php">Balik ke Paparan</a> | 
-<a href="index.php">Balik ke Halaman Utaman</a ] </div>
+<body style="background-color: #ffffff; color: #000000;">
+    <form method="post" action="isikan.php">
+        <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
+        <label for="nama">Nama :</label>
+        <input type="text" id="nama" name="nama" size="40" required maxlength="<?= BOOK_NAME_MAX_LENGTH ?>">
+        <br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" size="25" required maxlength="<?= BOOK_EMAIL_MAX_LENGTH ?>">
+        <br>
+        <label for="komen">Catatan :</label><br>
+        <textarea id="komen" name="komen" cols="30" rows="8" required></textarea>
+        <br>
+        <input type="submit" value="Hantar">
+        <input type="reset" value="Semula">
+        <br>
+    </form>
+    <hr>
+    <div style="text-align: center;">
+        [ <a href="papar.php">Balik ke Paparan</a> |
+        <a href="index.php">Balik ke Halaman Utama</a> ]
+    </div>
 </body>
 </html>
