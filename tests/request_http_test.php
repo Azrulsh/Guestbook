@@ -50,7 +50,7 @@ $router = $testDirectory . '/router.php';
 $csrfPath = var_export($projectRoot . '/csrf.php', true);
 $rootPath = var_export($projectRoot . '/', true);
 $fixturePath = var_export($testDirectory . '/', true);
-foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'csrf.php', 'validation.php', 'html.php'] as $fixtureFile) {
+foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'papar.php', 'csrf.php', 'validation.php', 'html.php'] as $fixtureFile) {
     copy($projectRoot . '/' . $fixtureFile, $testDirectory . '/' . $fixtureFile);
 }
 
@@ -71,10 +71,16 @@ mysqli_query($conn, 'CREATE TEMPORARY TABLE book (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1');
 $date = date('d-m-Y');
 $time = date('H:i:s');
-$seed = mysqli_prepare($conn, "INSERT INTO book VALUES (1, 'Ali', 'ali@example.com', ?, ?, 'Catatan')");
-mysqli_stmt_bind_param($seed, 'ss', $date, $time);
-mysqli_stmt_execute($seed);
-mysqli_stmt_close($seed);
+$fixture = $_GET['fixture'] ?? '';
+if ($fixture !== 'empty') {
+    $name = $fixture === 'xss' ? '"><svg onload=alert(1)>' : 'Ali';
+    $email = $fixture === 'xss' ? '"><svg/onload=alert(1)>' : 'ali@example.com';
+    $comment = $fixture === 'xss' ? "Line 1\n</div><script>alert(1)</script>" : 'Catatan';
+    $seed = mysqli_prepare($conn, 'INSERT INTO book VALUES (1, ?, ?, ?, ?, ?)');
+    mysqli_stmt_bind_param($seed, 'sssss', $name, $email, $date, $time, $comment);
+    mysqli_stmt_execute($seed);
+    mysqli_stmt_close($seed);
+}
 register_shutdown_function(static function () use ($conn): void {
     $result = mysqli_query($conn, 'SELECT id, nama, email, komen FROM book ORDER BY id');
     echo "\n__TEST_ROWS__" . json_encode(mysqli_fetch_all($result, MYSQLI_ASSOC), JSON_THROW_ON_ERROR);
@@ -106,7 +112,7 @@ if (count($parts) === 3 && $parts[0] === "__db_error"
     require ' . $rootPath . ' . $parts[2];
     return;
 }
-$allowed = ["isikan.php", "kemaskini.php", "buang.php", "ubah.php"];
+$allowed = ["isikan.php", "kemaskini.php", "buang.php", "ubah.php", "papar.php"];
 if (str_starts_with($path, "/__fixture/") && in_array(basename($path), $allowed, true)) {
     require ' . $fixturePath . ' . basename($path);
     return;
@@ -263,6 +269,44 @@ try {
             }
         }
         echo "PASS: 8 temporary-table write integration cases. No persistent database mutations.\n";
+
+        foreach (['', 'empty', 'xss'] as $fixture) {
+            $response = requestHttpTest($fixtureUrl . 'papar.php?fixture=' . $fixture, 'GET', [], $cookie);
+            expectHttpStatus(200, $response);
+            $markup = explode("\n__TEST_ROWS__", $response['body'], 2)[0];
+            $document = Dom\HTMLDocument::createFromString($markup, LIBXML_NOERROR);
+            $expectedCount = $fixture === 'empty' ? 0 : 1;
+            if ($document->querySelectorAll('.record-card')->length !== $expectedCount) {
+                throw new RuntimeException('Unexpected listing card count.');
+            }
+            if ($document->querySelectorAll('a[href="masuk.php"]')->length !== 1) {
+                throw new RuntimeException('The listing must have a single write action.');
+            }
+            if ($fixture === 'empty') {
+                if ($document->querySelector('#empty-title') === null || $document->querySelector('#list-controls') !== null) {
+                    throw new RuntimeException('The empty state must not show inactive list controls.');
+                }
+                continue;
+            }
+            $deleteForm = $document->querySelector('form.delete-entry');
+            if ($deleteForm === null || $deleteForm->getAttribute('method') !== 'post' || $deleteForm->getAttribute('action') !== 'buang.php') {
+                throw new RuntimeException('Deletion must remain a POST form.');
+            }
+            if ($deleteForm->querySelector('input[name="csrf_token"]')->getAttribute('value') !== $token
+                || $deleteForm->querySelector('input[name="id"]')->getAttribute('value') !== '1') {
+                throw new RuntimeException('The listing must retain its session token and record ID.');
+            }
+            if ($document->querySelectorAll('script:not([src]), [onload], [onerror], [onclick], [onsubmit]')->length !== 0) {
+                throw new RuntimeException('Unexpected executable inline markup in the listing.');
+            }
+            if ($fixture === 'xss' && $document->querySelector('.record-name')->textContent !== '"><svg onload=alert(1)>') {
+                throw new RuntimeException('User content must be preserved as plain text.');
+            }
+            if ($document->querySelector('.record-message')->querySelector('script') !== null) {
+                throw new RuntimeException('Stored markup must not become an executable script.');
+            }
+        }
+        echo "PASS: Populated, empty and stored-XSS listing states; POST/CSRF and single write action verified.\n";
     }
 
     foreach (['port', 'config', 'password', 'missing'] as $failure) {
