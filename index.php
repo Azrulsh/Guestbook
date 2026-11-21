@@ -14,6 +14,7 @@ $displayDate = $now->format('j') . ' ' . $months[(int) $now->format('n')] . ' ' 
     <meta name="description" content="Setiap kunjungan ada ceritanya. Tinggalkan pesanan dan baca catatan dalam buku pelawat kita.">
     <meta name="theme-color" content="#e4cbff">
     <title>Buku Pelawat — Setiap kunjungan ada ceritanya</title>
+    <link rel="stylesheet" href="assets/css/site.css">
     <link rel="stylesheet" href="assets/css/home.css">
     <script src="assets/js/home.js" defer></script>
 </head>
