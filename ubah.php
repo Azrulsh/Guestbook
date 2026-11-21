@@ -6,8 +6,11 @@ include("dbase.php");
 
 $idURL = $_GET['id'];
 
-$query = "SELECT * FROM book WHERE id = '$idURL'";
-$result = mysqli_query($conn,$query) or die ("Could not execute query in ubah.php");
+$query = "SELECT * FROM book WHERE id = ?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, 's', $idURL);
+mysqli_stmt_execute($stmt) or die ("Could not execute query in ubah.php");
+$result = mysqli_stmt_get_result($stmt);
 $row = mysqli_fetch_assoc($result);
 
 $nama = $row['nama'];
