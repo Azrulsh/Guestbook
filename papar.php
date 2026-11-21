@@ -1,8 +1,13 @@
 <?php
 
 require_once __DIR__ . '/html.php';
+require_once __DIR__ . '/csrf.php';
 
 try {
+    startCsrfSession();
+    $csrfToken = csrfToken();
+    session_write_close();
+
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     require_once __DIR__ . '/dbase.php';
 
@@ -14,7 +19,7 @@ try {
 
     $entries = mysqli_fetch_all($result, MYSQLI_ASSOC);
     mysqli_free_result($result);
-} catch (mysqli_sql_exception | RuntimeException $exception) {
+} catch (Exception $exception) {
     error_log('papar.php: ' . $exception->getMessage());
     http_response_code(500);
     exit('Data buku pelawat tidak dapat dimuatkan. Sila cuba lagi kemudian.');
@@ -25,6 +30,18 @@ try {
 <head>
     <meta charset="utf-8">
     <title>Paparan Buku Pelawat Saya</title>
+    <style>
+        .delete-link {
+            background: none;
+            border: 0;
+            margin: 0;
+            padding: 0;
+            color: #0000ee;
+            font: inherit;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <?php if ($entries === []): ?>
@@ -39,7 +56,13 @@ try {
                     Catatan: <?= nl2br(escapeHtml($entry['komen'])) ?><br>
                     Tindakan:
                     <a href="ubah.php?id=<?= escapeHtml(rawurlencode((string) $entry['id'])) ?>">Ubah</a> /
-                    <a href="buang.php?id=<?= escapeHtml(rawurlencode((string) $entry['id'])) ?>">Padam</a><br>
+                    <form method="post" action="buang.php" style="display: inline;"
+                          onsubmit="return confirm('Padam rekod ini? Tindakan ini tidak boleh dibatalkan.');">
+                        <input type="hidden" name="id" value="<?= escapeHtml((string) $entry['id']) ?>">
+                        <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
+                        <button type="submit" class="delete-link">Padam</button>
+                    </form>
+                    <br>
                 </li>
             <?php endforeach; ?>
         </ol>
