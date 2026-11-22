@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-// Keep these limits aligned with guestbook.sql: VARCHAR, TEXT, and signed INT.
+// Keep these limits aligned with database/guestbook.sql: VARCHAR, TEXT, and signed INT.
 const BOOK_NAME_MAX_LENGTH = 50;
 const BOOK_EMAIL_MAX_LENGTH = 30;
 const BOOK_COMMENT_MAX_BYTES = 65535;
