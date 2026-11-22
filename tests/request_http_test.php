@@ -50,7 +50,7 @@ $router = $testDirectory . '/router.php';
 $csrfPath = var_export($projectRoot . '/csrf.php', true);
 $rootPath = var_export($projectRoot . '/', true);
 $fixturePath = var_export($testDirectory . '/', true);
-foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'papar.php', 'csrf.php', 'validation.php', 'html.php'] as $fixtureFile) {
+foreach (['isikan.php', 'kemaskini.php', 'buang.php', 'ubah.php', 'papar.php', 'entry-form.php', 'csrf.php', 'validation.php', 'html.php'] as $fixtureFile) {
     copy($projectRoot . '/' . $fixtureFile, $testDirectory . '/' . $fixtureFile);
 }
 
@@ -307,6 +307,52 @@ try {
             }
         }
         echo "PASS: Populated, empty and stored-XSS listing states; POST/CSRF and single write action verified.\n";
+
+        foreach (['', 'xss'] as $fixture) {
+            $response = requestHttpTest($fixtureUrl . 'ubah.php?id=1&fixture=' . $fixture, 'GET', [], $cookie);
+            expectHttpStatus(200, $response);
+            $markup = explode("\n__TEST_ROWS__", $response['body'], 2)[0];
+            $document = Dom\HTMLDocument::createFromString($markup, LIBXML_NOERROR);
+            $form = $document->querySelector('#entry-form');
+            if ($form === null || $form->getAttribute('action') !== 'kemaskini.php' || $form->getAttribute('method') !== 'post' || $form->hasAttribute('novalidate')) {
+                throw new RuntimeException('The edit form must retain its native POST and validation fallback.');
+            }
+            if ($form->querySelector('input[name="csrf_token"]')->getAttribute('value') !== $token
+                || $form->querySelector('input[name="id"]')->getAttribute('value') !== '1') {
+                throw new RuntimeException('The edit form must retain its CSRF token and selected record ID.');
+            }
+            $expected = $fixture === 'xss'
+                ? ['nama' => '"><svg onload=alert(1)>', 'email' => '"><svg/onload=alert(1)>', 'komen' => "Line 1\n</div><script>alert(1)</script>"]
+                : ['nama' => 'Ali', 'email' => 'ali@example.com', 'komen' => 'Catatan'];
+            foreach ($expected as $field => $value) {
+                $element = $document->getElementById($field);
+                $actual = $field === 'komen' ? $element->textContent : $element->getAttribute('value');
+                if ($actual !== $value || !$element->hasAttribute('required')) {
+                    throw new RuntimeException('Edit values must be preserved safely: ' . $field);
+                }
+                foreach (explode(' ', $element->getAttribute('aria-describedby')) as $reference) {
+                    if ($document->getElementById($reference) === null) {
+                        throw new RuntimeException('Missing accessible edit field description.');
+                    }
+                }
+            }
+            if ($document->querySelector('#submit-label')->textContent !== 'Simpan perubahan'
+                || $form->querySelectorAll('button[type="reset"]')->length !== 1
+                || $document->querySelectorAll('a[href="papar.php"]')->length !== 1) {
+                throw new RuntimeException('Unexpected edit actions or duplicated navigation.');
+            }
+            if ($document->querySelectorAll('script:not([src]), [onload], [onerror], [onclick], [onsubmit]')->length !== 0) {
+                throw new RuntimeException('Stored markup escaped the edit form.');
+            }
+        }
+        $missingResponse = requestHttpTest($fixtureUrl . 'ubah.php?id=99', 'GET', [], $cookie);
+        expectHttpStatus(404, $missingResponse);
+        $missingMarkup = explode("\n__TEST_ROWS__", $missingResponse['body'], 2)[0];
+        $missingDocument = Dom\HTMLDocument::createFromString($missingMarkup, LIBXML_NOERROR);
+        if ($missingDocument->querySelector('#error-title') === null || $missingDocument->querySelector('form') !== null) {
+            throw new RuntimeException('A missing edit record must show an error state without a form.');
+        }
+        echo "PASS: Prefilled edit form, reset control, stored-XSS escaping, POST/CSRF, accessible descriptions and missing-record state.\n";
     }
 
     foreach (['port', 'config', 'password', 'missing'] as $failure) {
@@ -324,6 +370,7 @@ try {
         }
     }
     expectHttpStatus(404, requestHttpTest($baseUrl . '/dbase.php'));
+    expectHttpStatus(404, requestHttpTest($baseUrl . '/entry-form.php'));
     if (strpos(file_get_contents($testDirectory . '/server.log'), '__invalid_test_password__') !== false) {
         throw new RuntimeException('Database credentials must not appear in logs.');
     }

@@ -15,6 +15,7 @@
     }
 
     const fields = [nameField, emailField, commentField];
+    const idleSubmitLabel = submitLabel.textContent;
     const errors = new Map(fields.map(field => [field, document.getElementById(`${field.id}-error`)]));
 
     if ([...errors.values()].some(element => !element)) {
@@ -150,7 +151,7 @@
         if (resetButton) {
             resetButton.disabled = false;
         }
-        submitLabel.textContent = 'Simpan catatan';
+        submitLabel.textContent = idleSubmitLabel;
         form.removeAttribute('aria-busy');
         updateCounter();
     });

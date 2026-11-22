@@ -63,60 +63,18 @@ $year = (new DateTimeImmutable('now', new DateTimeZone('Asia/Kuala_Lumpur')))->f
                 </div>
             </section>
 
-            <div class="entry-card">
-                <div class="form-heading">
-                    <span class="form-heading-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="m15 5 4 4M4 20l4.5-1 12-12a2.8 2.8 0 0 0-4-4l-12 12L4 20Z"/>
-                        </svg>
-                    </span>
-                    <div>
-                        <h2 id="form-title">Catatan baharu</h2>
-                        <p id="form-instructions">Semua medan perlu diisi.</p>
-                    </div>
-                </div>
-
-                <form id="entry-form" class="entry-form" method="post" action="isikan.php" aria-labelledby="form-title" aria-describedby="form-instructions" accept-charset="UTF-8">
-                    <input type="hidden" name="csrf_token" value="<?= escapeHtml($csrfToken) ?>">
-
-                    <div class="form-field">
-                        <label for="nama">Nama</label>
-                        <input class="field-control" type="text" id="nama" name="nama" placeholder="Nama yang ingin dikenali" autocomplete="name" required maxlength="<?= BOOK_NAME_MAX_LENGTH ?>" aria-describedby="nama-hint nama-error">
-                        <p class="field-hint" id="nama-hint">Maksimum <?= BOOK_NAME_MAX_LENGTH ?> aksara.</p>
-                        <p class="field-error" id="nama-error" hidden></p>
-                    </div>
-
-                    <div class="form-field">
-                        <label for="email">Email</label>
-                        <input class="field-control" type="email" id="email" name="email" placeholder="nama@contoh.com" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" required maxlength="<?= BOOK_EMAIL_MAX_LENGTH ?>" aria-describedby="email-hint email-error">
-                        <p class="field-hint" id="email-hint">Email ini turut dipaparkan bersama catatan. Maksimum <?= BOOK_EMAIL_MAX_LENGTH ?> aksara.</p>
-                        <p class="field-error" id="email-error" hidden></p>
-                    </div>
-
-                    <div class="form-field">
-                        <label for="komen">Catatan</label>
-                        <textarea class="field-control" id="komen" name="komen" rows="6" placeholder="Apa yang ingin anda kongsikan hari ini?" required data-max-bytes="<?= BOOK_COMMENT_MAX_BYTES ?>" aria-describedby="komen-hint komen-error"></textarea>
-                        <div class="field-meta">
-                            <p class="field-hint" id="komen-hint">Ucapan, pesanan atau sekadar kata hai.</p>
-                            <span class="character-count" id="comment-count" hidden>0 aksara</span>
-                        </div>
-                        <p class="field-error" id="komen-error" hidden></p>
-                    </div>
-
-                    <div class="form-actions">
-                        <div class="form-action-buttons">
-                            <button class="button button-primary submit-entry" type="submit" id="submit-entry">
-                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M7 3h10l4 4v14H3V3h4Zm0 0v6h10V3M7 21v-7h10v7"/>
-                                </svg>
-                                <span id="submit-label">Simpan catatan</span>
-                            </button>
-                            <button class="button button-secondary reset-entry" type="reset" id="reset-entry">Semula</button>
-                        </div>
-                        <p class="publish-note">Catatan anda akan muncul dalam buku pelawat.</p>
-                    </div>
-                </form>
-            </div>
+            <?php
+            $entryForm = [
+                'action' => 'isikan.php',
+                'title' => 'Catatan baharu',
+                'submitLabel' => 'Simpan catatan',
+                'note' => 'Catatan anda akan muncul dalam buku pelawat.',
+                'csrfToken' => $csrfToken,
+                'id' => null,
+                'values' => ['nama' => '', 'email' => '', 'komen' => ''],
+            ];
+            require __DIR__ . '/entry-form.php';
+            ?>
         </main>
 
         <footer class="site-footer">
